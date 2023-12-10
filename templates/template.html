@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Recommender System</title>
+  <style>
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #cbdbc1;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    
+  }
+
+  .top-container {
+    background-color: #eafae1; /* Light green background */
+    width: 100%; /* Full width */
+    position: fixed; /* Fixed position at the top */
+    top: 0; /* Stick to the top */
+    z-index: 1; /* Ensure it's above other elements */
+  }
+
+  .container {
+    background-color: #f8f9fa;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    width: 80%;
+    max-width: 600px;
+    box-sizing: border-box;
+    text-align: center; /* Center content horizontally */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; /* Center content vertically */
+  }
+
+  h1 {
+    color: #2e7d32;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 2.5em;
+  }
+
+  h1:hover {
+    color: #4caf50;
+  }
+
+  select {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #4caf50;
+    border-radius: 5px;
+    background-color: #eafae1;
+    margin-bottom: 10px;
+    transition: border-color 0.3s ease-in-out;
+  }
+
+  select:hover,
+  select:focus {
+    border-color: #2e7d32;
+  }
+
+  .select-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  label {
+    margin-bottom: 10px;
+  }
+
+  .recommendation-list {
+    list-style-type: none;
+    padding: 0;
+  }
+
+  .recommendation-list li {
+    margin-bottom: 20px;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    cursor: pointer;
+    display: inline-block; /* Display next to each other */
+    margin-right: 10px; /* Add margin between posters */
+    align-items: center;
+    text-align: center;
+  }
+
+  .recommendation-list li:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  button {
+    padding: 8px 12px;
+    font-size: 14px;
+    background-color: #4caf50;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #2e7d32;
+  }
+
+  #recommendations {
+    margin-top: 20px;
+  }
+
+  .album-cover {
+    width: 100px; /* Adjusted width for smaller posters */
+    height: auto;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+
+  .recommendation-list li a {
+    /* Styles for the "Listen on Spotify" link */
+    display: block;
+    padding: 8px 12px;
+    font-size: 14px;
+    background-color: #4caf50; /* Green background */
+    color: #ffffff; /* White text color */
+    text-decoration: none;
+    border-radius: 5px;
+    margin-top: 10px; /* Add space above the link */
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  }
+
+  .recommendation-list li a:hover {
+    background-color: #2e7d32; /* Darker green on hover */
+  }
+
+  @media (max-width: 768px) {
+    .container {
+      width: 90%;
+    }
+  }
+</style>
+
+</head>
+<body>
+  <div class="container">
+    <h1>Music Recommender System</h1>
+    <div class="select-container">
+      <label for="filter">Choose a song !</label>
+      <select id="filter" name="filter" onchange="filterItems()">
+        <option value="all">----</option>
+        {% for track_name in track_names %}
+          <option value="{{ track_name }}">{{ track_name }}</option>
+        {% endfor %}
+      </select>
+      <button onclick="recommendSongs()">Recommend</button>
+    </div>
+    <div id="recommendations">
+      <!-- hne lresultat mtaa recommendations-->
+    </div>
+  </div>
+
+  <script>
+    function filterItems() {
+      const filter = document.getElementById('filter').value;
+      const listItems = document.querySelectorAll('.recommendation-list li');
+
+      listItems.forEach(item => {
+        const category = item.getAttribute('data-category');
+        const isMatch = category === filter || filter === 'all';
+        item.style.display = isMatch ? '' : 'none';
+      });
+    }
+
+    function recommendSongs() {
+      const selectedTrack = document.getElementById('filter').value;
+
+      //ajaax request pour flask endpoint 
+      fetch(`/content_recommendations?track_name=${selectedTrack}`)
+        .then(response => response.json())
+        .then(data => {
+          // Update the content inside the recommendations div with the result
+          const recommendationsContainer = document.getElementById('recommendations');
+          recommendationsContainer.innerHTML = '';
+
+          //affichage header h2
+          const header = document.createElement('h2');
+          header.textContent = `Recommended Songs for ${selectedTrack}`;
+          recommendationsContainer.appendChild(header);
+
+          //affichage recommended songs
+          const recommendationsList = document.createElement('ul');
+          recommendationsList.className = 'recommendation-list';
+
+          data.forEach(recommendation => {
+            const listItem = document.createElement('li');
+            
+            //affichage album cover
+            if (recommendation.album_cover_url) {
+              const albumCover = document.createElement('img');
+              albumCover.src = recommendation.album_cover_url;
+              albumCover.alt = 'Album Cover';
+              albumCover.className = 'album-cover';
+              listItem.appendChild(albumCover);
+            }
+
+            //affichage songname
+            const songName = document.createElement('p');
+            songName.textContent = recommendation.track_name;
+            listItem.appendChild(songName);
+
+            //affichage Spotify link
+            const spotifyLink = document.createElement('a');
+            spotifyLink.href = recommendation.spotify_link;
+            spotifyLink.textContent = 'Listen on Spotify';
+            spotifyLink.target = '_blank';
+            listItem.appendChild(spotifyLink);
+
+            listItem.setAttribute('data-category', recommendation.track_name);
+            recommendationsList.appendChild(listItem);
+          });
+
+          recommendationsContainer.appendChild(recommendationsList);
+        })
+        .catch(error => {
+          console.error('Error fetching recommendations:', error);
+
+          //affichage message d'erreur
+          const recommendationsContainer = document.getElementById('recommendations');
+          recommendationsContainer.innerHTML = '<p>Error fetching recommendations. Please try again later.</p>';
+        });
+    }
+  </script>
+</body>
+</html>
+
